@@ -1,7 +1,6 @@
 import type { Rule, Settings } from "./types";
-import { findMatchingRule } from "./pattern-matcher";
+import { isIgnoredUrl, resolveRoute } from "./route-resolver";
 
-const IGNORED_PROTOCOLS = ["about:", "moz-extension:", "chrome:", "resource:", "data:", "blob:"];
 const TRANSIT_TIMEOUT_MS = 5000;
 const BADGE_CLEAR_MS = 3000;
 
@@ -21,10 +20,6 @@ async function loadRules(): Promise<void> {
   const storage = getStorage();
   const data = await storage.get("rules");
   cachedRules = (data.rules as Rule[]) || [];
-}
-
-function isIgnoredUrl(url: string): boolean {
-  return !url || IGNORED_PROTOCOLS.some((p) => url.startsWith(p));
 }
 
 async function containerExists(cookieStoreId: string): Promise<boolean> {
@@ -71,20 +66,10 @@ async function redirectTab(tabId: number, url: string, cookieStoreId: string, ta
 async function handleTabUpdate(tabId: number, changeInfo: TabChangeInfo, tab: Tab): Promise<void> {
   if (!changeInfo.url) return;
   if (tabsInTransit.has(tabId)) return;
-  if (isIgnoredUrl(changeInfo.url)) return;
 
-  if (cachedSettings.mode === "route_all") {
-    if (!cachedSettings.defaultContainer) return;
-    const rule = findMatchingRule(changeInfo.url, cachedRules);
-    if (rule) return;
-    if (tab.cookieStoreId === cachedSettings.defaultContainer) return;
-    await redirectTab(tabId, changeInfo.url, cachedSettings.defaultContainer, tab);
-  } else {
-    const rule = findMatchingRule(changeInfo.url, cachedRules);
-    if (!rule) return;
-    if (tab.cookieStoreId === rule.cookieStoreId) return;
-    await redirectTab(tabId, changeInfo.url, rule.cookieStoreId, tab);
-  }
+  const result = resolveRoute(changeInfo.url, cachedRules, cachedSettings, tab.cookieStoreId ?? "");
+  if (result.action === "none") return;
+  await redirectTab(tabId, changeInfo.url, result.cookieStoreId, tab);
 }
 
 // Context menu: "Open in Container" submenu
