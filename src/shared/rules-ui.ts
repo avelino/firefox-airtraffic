@@ -16,6 +16,7 @@ interface RulesState {
   cancelBtn: HTMLButtonElement | null;
   matchHint: HTMLElement | null;
   form: HTMLFormElement | null;
+  negateCheckbox: HTMLInputElement | null;
   onRulesChanged: (() => void) | null;
 }
 
@@ -32,6 +33,7 @@ const state: RulesState = {
   cancelBtn: null,
   matchHint: null,
   form: null,
+  negateCheckbox: null,
   onRulesChanged: null,
 };
 
@@ -40,7 +42,8 @@ function updateMatchHints(): void {
   const config = MATCH_TYPE_CONFIG[state.matchTypeSelect.value];
   if (!config) return;
   state.patternInput.placeholder = config.placeholder;
-  state.matchHint.textContent = config.hint;
+  const negated = state.negateCheckbox?.checked;
+  state.matchHint.textContent = negated ? `Matches everything EXCEPT: ${config.hint}` : config.hint;
 }
 
 function cancelRuleEdit(): void {
@@ -50,6 +53,7 @@ function cancelRuleEdit(): void {
   if (state.containerSelect) state.containerSelect.value = "";
   if (state.submitBtn) state.submitBtn.textContent = "Add Rule";
   if (state.cancelBtn) state.cancelBtn.hidden = true;
+  if (state.negateCheckbox) state.negateCheckbox.checked = false;
   updateMatchHints();
 }
 
@@ -58,6 +62,7 @@ function startRuleEdit(rule: Rule): void {
   if (state.patternInput) state.patternInput.value = rule.pattern;
   if (state.matchTypeSelect) state.matchTypeSelect.value = rule.matchType;
   if (state.containerSelect) state.containerSelect.value = rule.cookieStoreId;
+  if (state.negateCheckbox) state.negateCheckbox.checked = rule.negate || false;
   if (state.submitBtn) state.submitBtn.textContent = "Save";
   if (state.cancelBtn) state.cancelBtn.hidden = false;
   updateMatchHints();
@@ -82,9 +87,11 @@ export function initRulesUI(opts: RulesUIOptions): void {
   state.cancelBtn = opts.cancelBtn;
   state.matchHint = opts.matchHint;
   state.form = opts.form;
+  state.negateCheckbox = opts.negateCheckbox || null;
   state.onRulesChanged = opts.onRulesChanged || null;
 
   state.matchTypeSelect.addEventListener("change", updateMatchHints);
+  if (state.negateCheckbox) state.negateCheckbox.addEventListener("change", updateMatchHints);
   state.cancelBtn.addEventListener("click", cancelRuleEdit);
 
   state.form.addEventListener("submit", async (e) => {
@@ -94,12 +101,15 @@ export function initRulesUI(opts: RulesUIOptions): void {
     const cookieStoreId = state.containerSelect!.value;
     if (!pattern || !cookieStoreId) return;
 
+    const negate = state.negateCheckbox?.checked || false;
+
     if (state.editingRuleId) {
       const rule = state.allRules.find((r) => r.id === state.editingRuleId);
       if (rule) {
         rule.pattern = pattern;
         rule.matchType = matchType as Rule["matchType"];
         rule.cookieStoreId = cookieStoreId;
+        rule.negate = negate || undefined;
       }
       cancelRuleEdit();
     } else {
@@ -108,6 +118,7 @@ export function initRulesUI(opts: RulesUIOptions): void {
         pattern,
         matchType: matchType as Rule["matchType"],
         cookieStoreId,
+        ...(negate ? { negate: true } : {}),
       });
       state.patternInput!.value = "";
     }
@@ -152,7 +163,8 @@ export function renderRulesList(rules: Rule[]): void {
 
     const meta = document.createElement("span");
     meta.className = "rule-meta";
-    meta.textContent = MATCH_TYPE_CONFIG[rule.matchType]?.label || rule.matchType;
+    const label = MATCH_TYPE_CONFIG[rule.matchType]?.label || rule.matchType;
+    meta.textContent = rule.negate ? `NOT ${label}` : label;
 
     info.appendChild(pattern);
     info.appendChild(meta);

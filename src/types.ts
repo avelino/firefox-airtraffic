@@ -5,6 +5,7 @@ export interface Rule {
   pattern: string;
   matchType: MatchType;
   cookieStoreId: string;
+  negate?: boolean;
 }
 
 export interface Settings {
@@ -28,5 +29,6 @@ export interface RulesUIOptions {
   cancelBtn: HTMLButtonElement;
   matchHint: HTMLElement;
   form: HTMLFormElement;
+  negateCheckbox?: HTMLInputElement;
   onRulesChanged?: () => void;
 }

@@ -11,6 +11,7 @@ initRulesUI({
   cancelBtn: document.getElementById("cancel-btn") as HTMLButtonElement,
   matchHint: document.getElementById("match-hint") as HTMLElement,
   form: document.getElementById("add-rule-form") as HTMLFormElement,
+  negateCheckbox: document.getElementById("negate-checkbox") as HTMLInputElement,
 });
 
 document.getElementById("open-settings")!.addEventListener("click", (e) => {

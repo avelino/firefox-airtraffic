@@ -12,38 +12,45 @@ export function urlMatchesPattern(url: string, rule: Rule): boolean {
   const lowerUrl = url.toLowerCase();
   const lowerPattern = rule.pattern.toLowerCase();
 
+  let matched: boolean;
   switch (rule.matchType) {
     case "domain": {
       const hostname = extractHostname(url);
-      if (!hostname) return false;
-      return hostname === lowerPattern || hostname.endsWith("." + lowerPattern);
+      matched = hostname !== null && (hostname === lowerPattern || hostname.endsWith("." + lowerPattern));
+      break;
     }
     case "domainContains": {
       const hostname = extractHostname(url);
-      if (!hostname) return false;
-      return hostname.includes(lowerPattern);
+      matched = hostname !== null && hostname.includes(lowerPattern);
+      break;
     }
     case "contains":
-      return lowerUrl.includes(lowerPattern);
+      matched = lowerUrl.includes(lowerPattern);
+      break;
     case "startsWith":
-      return lowerUrl.startsWith(lowerPattern);
+      matched = lowerUrl.startsWith(lowerPattern);
+      break;
     case "wildcard": {
       const escaped = lowerPattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
       try {
-        return new RegExp(escaped, "i").test(url);
+        matched = new RegExp(escaped, "i").test(url);
       } catch {
-        return false;
+        matched = false;
       }
+      break;
     }
     case "regex":
       try {
-        return new RegExp(rule.pattern, "i").test(url);
+        matched = new RegExp(rule.pattern, "i").test(url);
       } catch {
-        return false;
+        matched = false;
       }
+      break;
     default:
-      return false;
+      matched = false;
   }
+
+  return rule.negate ? !matched : matched;
 }
 
 export function findMatchingRule(url: string, rules: Rule[] | null | undefined): Rule | null {

@@ -130,6 +130,22 @@ button.delete-btn:hover {
   flex-shrink: 0;
 }
 
+/* Negate toggle */
+.negate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+  cursor: pointer;
+  user-select: none;
+}
+
+.negate-toggle input[type="checkbox"] {
+  margin: 0;
+  accent-color: #ef4444;
+}
+
 /* Hint text */
 .hint {
   font-size: 11px;

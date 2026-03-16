@@ -114,6 +114,55 @@ describe("urlMatchesPattern", () => {
     const rule = { id: "1", pattern: "github.com/avelino/*", matchType: "wildcard" as const, cookieStoreId: "firefox-container-1" };
     assert.equal(urlMatchesPattern("https://githubXcom/avelino/test", rule), false);
   });
+
+  describe("negated rules", () => {
+    it("negated domain: false for matching URL, true for non-matching", () => {
+      const rule = { id: "1", pattern: "work.company.com", matchType: "domain" as const, cookieStoreId: "c1", negate: true };
+      assert.equal(urlMatchesPattern("https://work.company.com/dashboard", rule), false);
+      assert.equal(urlMatchesPattern("https://github.com", rule), true);
+    });
+
+    it("negated contains: false for URL with pattern, true without", () => {
+      const rule = { id: "1", pattern: "work", matchType: "contains" as const, cookieStoreId: "c1", negate: true };
+      assert.equal(urlMatchesPattern("https://work.company.com", rule), false);
+      assert.equal(urlMatchesPattern("https://github.com", rule), true);
+    });
+
+    it("negated regex: inverts match result", () => {
+      const rule = { id: "1", pattern: "^https://(www\\.)?work\\.com", matchType: "regex" as const, cookieStoreId: "c1", negate: true };
+      assert.equal(urlMatchesPattern("https://work.com/app", rule), false);
+      assert.equal(urlMatchesPattern("https://github.com", rule), true);
+    });
+
+    it("negated wildcard: inverts match result", () => {
+      const rule = { id: "1", pattern: "*.work.com", matchType: "wildcard" as const, cookieStoreId: "c1", negate: true };
+      assert.equal(urlMatchesPattern("https://app.work.com/page", rule), false);
+      assert.equal(urlMatchesPattern("https://github.com", rule), true);
+    });
+
+    it("negated domainContains: inverts match result", () => {
+      const rule = { id: "1", pattern: "work", matchType: "domainContains" as const, cookieStoreId: "c1", negate: true };
+      assert.equal(urlMatchesPattern("https://work.company.com", rule), false);
+      assert.equal(urlMatchesPattern("https://github.com", rule), true);
+    });
+
+    it("negate: false behaves like no negate", () => {
+      const rule = { id: "1", pattern: "github.com", matchType: "domain" as const, cookieStoreId: "c1", negate: false };
+      assert.equal(urlMatchesPattern("https://github.com", rule), true);
+      assert.equal(urlMatchesPattern("https://example.com", rule), false);
+    });
+
+    it("rule without negate field behaves normally (backward compat)", () => {
+      const rule = { id: "1", pattern: "github.com", matchType: "domain" as const, cookieStoreId: "c1" };
+      assert.equal(urlMatchesPattern("https://github.com", rule), true);
+      assert.equal(urlMatchesPattern("https://example.com", rule), false);
+    });
+
+    it("negated domain with invalid URL returns true (no hostname = no match = negated to true)", () => {
+      const rule = { id: "1", pattern: "work.com", matchType: "domain" as const, cookieStoreId: "c1", negate: true };
+      assert.equal(urlMatchesPattern("not-a-url", rule), true);
+    });
+  });
 });
 
 describe("findMatchingRule", () => {
@@ -149,5 +198,23 @@ describe("findMatchingRule", () => {
     ];
     const result = findMatchingRule("https://github.com", overlapping);
     assert.equal(result?.id, "a");
+  });
+
+  it("negated rule matches URLs that do NOT match the pattern", () => {
+    const rules = [
+      { id: "1", pattern: "work.company.com", matchType: "domain" as const, cookieStoreId: "personal", negate: true },
+    ];
+    assert.equal(findMatchingRule("https://github.com", rules)?.id, "1");
+    assert.equal(findMatchingRule("https://work.company.com", rules), null);
+  });
+
+  it("positive rule before negated rule: positive wins for matching URL", () => {
+    const rules = [
+      { id: "pos", pattern: "github.com", matchType: "domain" as const, cookieStoreId: "dev" },
+      { id: "neg", pattern: "work.company.com", matchType: "domain" as const, cookieStoreId: "personal", negate: true },
+    ];
+    assert.equal(findMatchingRule("https://github.com", rules)?.id, "pos");
+    assert.equal(findMatchingRule("https://random.com", rules)?.id, "neg");
+    assert.equal(findMatchingRule("https://work.company.com", rules), null);
   });
 });

@@ -32,6 +32,10 @@
             </select>
           </div>
           <input type="text" id="pattern-input" placeholder="github.com" required>
+          <label class="negate-toggle">
+            <input type="checkbox" id="negate-checkbox">
+            <span>Exclude (match everything EXCEPT)</span>
+          </label>
           <span id="match-hint" class="hint">Matches github.com and all subdomains</span>
           <div class="form-actions">
             <button type="submit" id="submit-btn">Add Rule</button>
