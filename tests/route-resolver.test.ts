@@ -115,6 +115,33 @@ describe("resolveRoute", () => {
     });
   });
 
+  describe("negated rules in route_all mode", () => {
+    const negatedRules: Rule[] = [
+      { id: "1", pattern: "work.company.com", matchType: "domain", cookieStoreId: "container-personal", negate: true },
+    ];
+    const settings: Settings = { mode: "route_all", defaultContainer: "container-default", useSync: false };
+
+    it("redirects non-excluded URLs to the negated rule container", () => {
+      const result = resolveRoute("https://github.com", negatedRules, settings, "firefox-default");
+      assert.deepEqual(result, { action: "redirect", cookieStoreId: "container-personal" });
+    });
+
+    it("redirects excluded domain to default container", () => {
+      const result = resolveRoute("https://work.company.com/dashboard", negatedRules, settings, "firefox-default");
+      assert.deepEqual(result, { action: "redirect", cookieStoreId: "container-default" });
+    });
+
+    it("returns none when excluded domain is already in default container", () => {
+      const result = resolveRoute("https://work.company.com", negatedRules, settings, "container-default");
+      assert.deepEqual(result, { action: "none" });
+    });
+
+    it("returns none when non-excluded URL is already in rule container", () => {
+      const result = resolveRoute("https://github.com", negatedRules, settings, "container-personal");
+      assert.deepEqual(result, { action: "none" });
+    });
+  });
+
   describe("rule priority (first match wins)", () => {
     it("positive rule before negated catch-all", () => {
       const mixed: Rule[] = [

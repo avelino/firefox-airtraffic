@@ -22,7 +22,13 @@ export function resolveRoute(
   if (settings.mode === "route_all") {
     if (!settings.defaultContainer) return { action: "none" };
     const rule = findMatchingRule(url, rules);
-    if (rule) return { action: "none" };
+    if (rule) {
+      if (rule.negate) {
+        if (currentContainer === rule.cookieStoreId) return { action: "none" };
+        return { action: "redirect", cookieStoreId: rule.cookieStoreId };
+      }
+      return { action: "none" };
+    }
     if (currentContainer === settings.defaultContainer) return { action: "none" };
     return { action: "redirect", cookieStoreId: settings.defaultContainer };
   }
